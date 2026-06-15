@@ -1,0 +1,51 @@
+<%- include('partials/header') %>
+
+<section class="error-card">
+  <div class="error-icon">
+    <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" fill="currentColor" viewBox="0 0 16 16">
+      <path d="M7.002 11a1 1 0 1 1 2 0 1 1 0 0 1-2 0zM7.1 4.995a.905.905 0 1 1 1.8 0l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 4.995z"/>
+      <path d="M0 12.5A1.5 1.5 0 0 0 1.5 14h13a1.5 1.5 0 0 0 1.5-1.5V3.5A1.5 1.5 0 0 0 14.5 2h-13A1.5 1.5 0 0 0 0 3.5v9zM1.5 3h13a.5.5 0 0 1 .5.5v9a.5.5 0 0 1-.5.5h-13a.5.5 0 0 1-.5-.5v-9a.5.5 0 0 1 .5-.5z"/>
+    </svg>
+  </div>
+  
+  <h2 class="error-title">Prompt Not Found</h2>
+  
+  <p class="error-message">
+    <% if (query && query.trim() !== '') { %>
+      We couldn't find any active prompt for keyword "<strong><%= query %></strong>".
+    <% } else { %>
+      The page you are looking for does not exist.
+    <% } %>
+    Please make sure the keyword matches the one in our Reel exactly.
+  </p>
+
+  <!-- Centered Search section for quick retry -->
+  <form id="search-form" action="/search" method="GET" class="search-form" style="margin-top: 1rem;">
+    <div class="search-input-wrapper">
+      <input 
+        type="text" 
+        id="search-keyword" 
+        name="q" 
+        class="search-input" 
+        placeholder="Try another keyword" 
+        required 
+        autocomplete="off"
+        autocorrect="off"
+        autocapitalize="off"
+        spellcheck="false"
+      >
+    </div>
+    <button type="submit" class="search-btn">
+      <span>Search</span>
+    </button>
+  </form>
+
+  <a href="/" class="back-home-btn">
+    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+      <path d="M8.707 1.5a1 1 0 0 0-1.414 0L.646 8.146a.5.5 0 0 0 .708.708L2 8.207V13.5A1.5 1.5 0 0 0 3.5 15h9a1.5 1.5 0 0 0 1.5-1.5V8.207l.646.647a.5.5 0 0 0 .708-.708L13 5.793V2.5a.5.5 0 0 0-.5-.5h-1a.5.5 0 0 0-.5.5v1.293L8.707 1.5ZM13 7.207V13.5a.5.5 0 0 1-.5.5h-9a.5.5 0 0 1-.5-.5V7.207l5-5 5 5Z"/>
+    </svg>
+    Back to Homepage
+  </a>
+</section>
+
+<%- include('partials/footer') %>
