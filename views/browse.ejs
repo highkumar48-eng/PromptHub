@@ -1,0 +1,58 @@
+<%- include('partials/header') %>
+
+<section class="browse-section">
+  <div class="browse-header">
+    <span class="prompt-label">Library</span>
+    <h2 class="browse-title">Browse All Prompts</h2>
+    <p class="browse-subtitle">
+      <strong><%= prompts.length %></strong> prompt<%= prompts.length !== 1 ? 's' : '' %> available — click any to get the full prompt text.
+    </p>
+  </div>
+
+  <% if (prompts.length === 0) { %>
+    <div class="browse-empty">
+      <p class="browse-empty-text">🔍 No prompts available right now. Check back soon!</p>
+      <a href="/" class="back-home-btn" style="margin-top:1rem;">← Back to Search</a>
+    </div>
+  <% } else { %>
+    <div class="prompt-grid">
+      <% prompts.forEach(function(p) { %>
+        <a href="/prompt/<%= encodeURIComponent(p.Keyword.toLowerCase()) %>" class="prompt-grid-card" aria-label="View prompt: <%= p.PromptTitle %>">
+          
+          <% if (p.PreviewImageUrl && p.PreviewImageUrl.trim() !== '') { %>
+            <div class="grid-card-image-wrap">
+              <img 
+                src="<%= p.PreviewImageUrl %>" 
+                alt="<%= p.PromptTitle %> preview" 
+                class="grid-card-image"
+                loading="lazy"
+              >
+            </div>
+          <% } else { %>
+            <div class="grid-card-image-wrap grid-card-no-image">
+              <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="currentColor" viewBox="0 0 16 16" opacity="0.3">
+                <path d="M6.002 5.5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0z"/>
+                <path d="M2.002 1a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V3a2 2 0 0 0-2-2h-12zm12 1a1 1 0 0 1 1 1v6.5l-3.777-1.947a.5.5 0 0 0-.577.093l-3.71 3.71-2.66-1.772a.5.5 0 0 0-.63.062L1.002 12V3a1 1 0 0 1 1-1h12z"/>
+              </svg>
+            </div>
+          <% } %>
+
+          <div class="grid-card-body">
+            <span class="grid-card-keyword"><%= p.Keyword %></span>
+            <h3 class="grid-card-title"><%= p.PromptTitle %></h3>
+            <span class="grid-card-cta">
+              View Prompt
+              <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="currentColor" viewBox="0 0 16 16">
+                <path fill-rule="evenodd" d="M1 8a.5.5 0 0 1 .5-.5h11.793l-3.147-3.146a.5.5 0 0 1 .708-.708l4 4a.5.5 0 0 1 0 .708l-4 4a.5.5 0 0 1-.708-.708L13.293 8.5H1.5A.5.5 0 0 1 1 8z"/>
+              </svg>
+            </span>
+          </div>
+        </a>
+      <% }); %>
+    </div>
+  <% } %>
+</section>
+
+<%- include('partials/ad_slot', { slotId: 4, propellerZoneId: propellerZoneId }) %>
+
+<%- include('partials/footer') %>

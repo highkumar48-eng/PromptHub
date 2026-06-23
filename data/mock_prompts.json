@@ -5,7 +5,8 @@
     "Prompt Text": "Cinematic portrait of a majestic lion king wearing an ornate golden crown studded with rubies and sapphires. Dark dramatic lighting, black background, smoke effects, hyper-realistic fur details, photorealistic, 8k resolution, depth of field, shot on 85mm lens.",
     "Preview Image URL": "https://images.unsplash.com/photo-1546182990-dffeafbe841d?w=800&auto=format&fit=crop&q=80",
     "Created Date": "2026-06-14",
-    "Status": "Active"
+    "Status": "Active",
+    "Views": 0
   },
   {
     "Keyword": "TOYBOX",
@@ -13,7 +14,8 @@
     "Prompt Text": "A 3D render of a futuristic cyberpunk warrior action figure inside its original plastic toy box packaging. Detailed branding text on the box, neon logo, transparent window showing the toy with accessories, realistic plastic reflections, toy photography, studio lighting.",
     "Preview Image URL": "https://images.unsplash.com/photo-1593085512500-5d55148d6f0d?w=800&auto=format&fit=crop&q=80",
     "Created Date": "2026-06-14",
-    "Status": "Active"
+    "Status": "Active",
+    "Views": 0
   },
   {
     "Keyword": "LUXURYPORTRAIT",
@@ -21,7 +23,8 @@
     "Prompt Text": "A majestic oil painting of a modern stylish person in ornate Renaissance royal attire, holding a sleek gold-plated smartphone. Chiaroscuro lighting style, rich velvet textures, deep golden and crimson colors, Rembrandt style portrait, detailed brush strokes.",
     "Preview Image URL": "https://images.unsplash.com/photo-1579783902614-a3fb3927b6a5?w=800&auto=format&fit=crop&q=80",
     "Created Date": "2026-06-14",
-    "Status": "Active"
+    "Status": "Active",
+    "Views": 0
   },
   {
     "Keyword": "ANIMEWARRIOR",
@@ -29,7 +32,8 @@
     "Prompt Text": "Dynamic retro 90s anime style illustration of a cyberpunk warrior with a glowing neon blue katana. Standing on a rainy Tokyo street at night, colorful neon reflections in puddles, stylized smoke, bold ink lines, hand-drawn aesthetic.",
     "Preview Image URL": "https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?w=800&auto=format&fit=crop&q=80",
     "Created Date": "2026-06-14",
-    "Status": "Active"
+    "Status": "Active",
+    "Views": 0
   },
   {
     "Keyword": "INACTIVEPROMPT",
@@ -38,6 +42,7 @@
     "Prompt Text": "This prompt should not show up in searches because its status is inactive.",
     "Preview Image URL": "",
     "Created Date": "2026-06-14",
-    "Status": "Inactive"
+    "Status": "Inactive",
+    "Views": 0
   }
 ]

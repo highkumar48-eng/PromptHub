@@ -1,0 +1,95 @@
+<%- include('partials/header') %>
+
+<section class="static-page-card">
+  <div class="static-page-header">
+    <span class="prompt-label">Legal</span>
+    <h2 class="static-page-title">Privacy Policy</h2>
+    <p class="static-page-meta">Last updated: <%= new Date().toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric' }) %></p>
+  </div>
+
+  <div class="static-page-body">
+
+    <div class="policy-section">
+      <h3 class="policy-heading">1. Introduction</h3>
+      <p class="policy-text">
+        Welcome to <strong>PromptHub</strong> ("we", "us", or "our"). This Privacy Policy explains how we handle information when you visit our website at <strong>prompthub.com</strong> (the "Service"). We are committed to protecting your privacy.
+      </p>
+    </div>
+
+    <div class="policy-section">
+      <h3 class="policy-heading">2. Information We Collect</h3>
+      <p class="policy-text">
+        <strong>We do not collect any personal data.</strong> PromptHub does not require you to create an account, sign up, or provide any personal information to use the Service. We do not store your name, email address, or any identifying information.
+      </p>
+      <p class="policy-text">
+        The only data processed is the keyword you type into the search box — this is used solely to look up the matching AI prompt in our database. This data is <strong>not stored, logged, or associated with you</strong> in any way.
+      </p>
+    </div>
+
+    <div class="policy-section">
+      <h3 class="policy-heading">3. Cookies</h3>
+      <p class="policy-text">
+        PromptHub itself does not set any first-party cookies. However, third-party advertising networks we use (see Section 4) may place cookies on your device to serve relevant advertisements. These cookies are governed by the respective third-party privacy policies.
+      </p>
+    </div>
+
+    <div class="policy-section">
+      <h3 class="policy-heading">4. Advertising — PropellerAds</h3>
+      <p class="policy-text">
+        PromptHub uses <strong>PropellerAds</strong> as our advertising partner to serve ads on this website. PropellerAds may use cookies, web beacons, and similar tracking technologies to display personalized advertisements based on your browsing behaviour.
+      </p>
+      <p class="policy-text">
+        By using PromptHub, you acknowledge that PropellerAds and other advertising networks may collect and use data in accordance with their own privacy policies. We encourage you to review:
+      </p>
+      <ul class="policy-list">
+        <li><a href="https://propellerads.com/privacy/" target="_blank" rel="noopener noreferrer" class="policy-link">PropellerAds Privacy Policy ↗</a></li>
+      </ul>
+      <p class="policy-text">
+        You can opt out of personalized advertising by visiting the <a href="https://www.youronlinechoices.com/" target="_blank" rel="noopener noreferrer" class="policy-link">Your Online Choices ↗</a> page or adjusting your browser cookie settings.
+      </p>
+    </div>
+
+    <div class="policy-section">
+      <h3 class="policy-heading">5. Third-Party Services</h3>
+      <p class="policy-text">
+        Our website may contain links to external websites or services (such as Midjourney, DALL-E, etc.) that are not operated by us. We have no control over the content or privacy practices of these third-party sites. We encourage you to review the privacy policy of every site you visit.
+      </p>
+    </div>
+
+    <div class="policy-section">
+      <h3 class="policy-heading">6. Children's Privacy</h3>
+      <p class="policy-text">
+        PromptHub is not directed at children under the age of 13. We do not knowingly collect personal information from children. If you believe we have inadvertently collected information from a child, please contact us immediately.
+      </p>
+    </div>
+
+    <div class="policy-section">
+      <h3 class="policy-heading">7. Changes to This Policy</h3>
+      <p class="policy-text">
+        We may update this Privacy Policy from time to time. Any changes will be reflected on this page with an updated "Last updated" date. Continued use of PromptHub after any changes constitutes your acceptance of the updated policy.
+      </p>
+    </div>
+
+    <div class="policy-section">
+      <h3 class="policy-heading">8. Contact Us</h3>
+      <p class="policy-text">
+        If you have any questions about this Privacy Policy, please contact us at:
+      </p>
+      <p class="policy-text">
+        📧 <a href="mailto:hello@prompthub.com" class="policy-link">hello@prompthub.com</a>
+      </p>
+    </div>
+
+  </div>
+
+  <div class="static-page-footer-nav">
+    <a href="/" class="back-home-btn">
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+        <path fill-rule="evenodd" d="M15 8a.5.5 0 0 0-.5-.5H2.707l3.147-3.146a.5.5 0 1 0-.708-.708l-4 4a.5.5 0 0 0 0 .708l4 4a.5.5 0 0 0 .708-.708L2.707 8.5H14.5A.5.5 0 0 0 15 8z"/>
+      </svg>
+      Back to Homepage
+    </a>
+  </div>
+</section>
+
+<%- include('partials/footer') %>

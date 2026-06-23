@@ -1,20 +1,27 @@
-    </main>
+</main>
 
     <!-- Ad Slot 3: Footer Area -->
-    <%- include('ad_slot', { slotId: 3, description: 'Footer Banner Ad (728x90 / 320x50)' }) %>
+    <%- include('ad_slot', { slotId: 3, propellerZoneId: propellerZoneId }) %>
 
     <footer class="site-footer">
-      <p>&copy; <%= new Date().getFullYear() %> PromptHub. All rights reserved.</p>
+      <nav class="footer-nav">
+        <a href="/browse" class="footer-nav-link">Browse All</a>
+        <span class="footer-nav-sep">·</span>
+        <a href="/about" class="footer-nav-link">About</a>
+        <span class="footer-nav-sep">·</span>
+        <a href="/privacy-policy" class="footer-nav-link">Privacy Policy</a>
+      </nav>
+      <p class="footer-copy">&copy; <%= new Date().getFullYear() %> PromptHub. All rights reserved.</p>
     </footer>
 
-    <!-- Copy Success Toast Notification -->
+    <!-- Dynamic Toast Notification (used by copy + share) -->
     <div id="success-toast" class="toast-notification">
-      <span class="toast-icon">
+      <span class="toast-icon" id="toast-icon">
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
           <path d="M13.854 3.646a.5.5 0 0 1 0 .708l-7 7a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L6.5 10.293l6.646-6.647a.5.5 0 0 1 .708 0z"/>
         </svg>
       </span>
-      <span>Prompt copied successfully!</span>
+      <span id="toast-message">Prompt copied successfully!</span>
     </div>
 
     <!-- Client-side Javascript -->

@@ -24,10 +24,18 @@
       </svg>
     </button>
   </form>
+
+  <!-- Browse All CTA -->
+  <a href="/browse" class="browse-all-link">
+    <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" fill="currentColor" viewBox="0 0 16 16">
+      <path d="M2.5 12a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5zm0-4a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5zm0-4a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5z"/>
+    </svg>
+    Browse All Prompts
+  </a>
 </section>
 
 <!-- Ad Slot 1: Below Search Section -->
-<%- include('partials/ad_slot', { slotId: 1 }) %>
+<%- include('partials/ad_slot', { slotId: 1, propellerZoneId: propellerZoneId }) %>
 
 <section class="how-it-works">
   <h3 class="section-title">
