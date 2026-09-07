@@ -1,4 +1,5 @@
-const { url, key } = window.PROMPTHUB_SUPABASE || {};
+const url = document.querySelector('meta[name="prompthub-supabase-url"]')?.content;
+const key = document.querySelector('meta[name="prompthub-supabase-key"]')?.content;
 const api = async (path, options = {}, token = key) => {
   const r = await fetch(url + path, { ...options, headers: { apikey:key, Authorization:`Bearer ${token}`, 'Content-Type':'application/json', ...(options.headers||{}) } });
   const body = await r.json().catch(()=>({})); if(!r.ok) throw new Error(body.msg || body.message || body.error_description || 'Request failed.'); return body;
@@ -13,3 +14,4 @@ const initDashboard=async()=>{ const root=document.querySelector('[data-dashboar
 const initAdmin=async()=>{const root=document.querySelector('[data-admin]');if(!root)return;try{const me=await user();if(!me)return go('/admin/login');const token=session().access_token;const roles=await api('/rest/v1/app_roles?select=role',{},token);if(!roles.some(x=>x.role==='admin'))return go('/admin/login');const creators=await api('/rest/v1/creator_profiles?select=handle,display_name,created_at&order=created_at.desc',{},token);const ledger=await api('/rest/v1/creator_monthly_ledger?select=creator_id,creator_share_paise,status,period_start,period_end&order=period_start.desc',{},token);root.innerHTML=`<p class="eyebrow">ADMIN DASHBOARD</p><h1>Creator revenue</h1><p>${creators.length} creators · ${ledger.length} ledger entries</p><h2>Creators</h2>${creators.map(c=>`<article class="card"><strong>${esc(c.display_name)}</strong> · /c/${esc(c.handle)}</article>`).join('')||'<p class="muted">No creators yet.</p>'}<h2>Payment ledger</h2>${ledger.map(l=>`<article class="card">₹${(l.creator_share_paise/100).toFixed(2)} · ${esc(l.status)} · ${esc(l.period_start)}</article>`).join('')||'<p class="muted">No earnings have been calculated yet.</p>'}`;}catch(err){root.innerHTML=`<h1>Admin access required</h1><p>${esc(err.message)}</p>`;}};
 document.querySelector('[data-copy]')?.addEventListener('click',async e=>{await navigator.clipboard.writeText(e.target.previousElementSibling.textContent);e.target.textContent='Copied';});
 initDashboard();initAdmin();
+
