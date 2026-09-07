@@ -11,7 +11,46 @@ const user = async () => { const s=session(); return s ? api('/auth/v1/user',{},
 const go = path => location.assign(path);
 for (const form of document.querySelectorAll('[data-auth]')) form.addEventListener('submit', async e => { e.preventDefault(); const mode=e.submitter?.value || 'signin', data=new FormData(form), message=form.querySelector('[data-auth-message]'); message.textContent='Please wait…'; try { const endpoint=mode==='signup'?'/auth/v1/signup':'/auth/v1/token?grant_type=password'; const body=mode==='signup'?{email:data.get('email'),password:data.get('password')}:{email:data.get('email'),password:data.get('password')}; const result=await api(endpoint,{method:'POST',body:JSON.stringify(body)}); if(mode==='signup' && !result.access_token){ message.textContent='Check your email, confirm your account, then sign in.'; return; } save(result); if(form.dataset.auth==='admin') { const roles=await api('/rest/v1/app_roles?select=role',{},result.access_token); if(!roles.some(x=>x.role==='admin')) throw new Error('This account is not an administrator.'); go('/admin'); } else go('/dashboard'); } catch(err){ message.textContent=err.message; } });
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const initDashboard=async()=>{ const root=document.querySelector('[data-dashboard]'); if(!root)return; try { const me=await user(); if(!me) return go('/creator/login'); const token=session().access_token; let profiles=await api(`/rest/v1/creator_profiles?select=*&id=eq.${me.id}`,{},token); let profile=profiles[0]; if(!profile){ const publicProfiles=await api('/rest/v1/creator_profiles?select=*&is_active=eq.true'); profile=publicProfiles.find(x=>x.id===me.id); } if(!profile){ root.innerHTML=`<p class="eyebrow">CREATE YOUR PAGE</p><h1>Choose your bio link</h1><form data-profile class="auth-form"><label>Display name<input name="display_name" required maxlength="80"></label><label>Handle<input name="handle" required pattern="[a-z0-9-]{3,30}" placeholder="your-name"></label><label>Bio<textarea name="bio" maxlength="240"></textarea></label><button class="button">Create page</button><p class="muted" data-message></p></form>`; root.querySelector('[data-profile]').addEventListener('submit',async e=>{e.preventDefault();const f=new FormData(e.target);try{await api('/rest/v1/creator_profiles',{method:'POST',headers:{Prefer:'return=minimal'},body:JSON.stringify({id:me.id,display_name:f.get('display_name'),handle:f.get('handle').toLowerCase(),bio:f.get('bio')})},token);await api('/rest/v1/creator_monetization',{method:'POST',headers:{Prefer:'return=minimal'},body:JSON.stringify({creator_id:me.id})},token);location.reload()}catch(err){root.querySelector('[data-message]').textContent=err.message}});return;} const prompts=await api(`/rest/v1/prompts?select=*&creator_id=eq.${me.id}&order=updated_at.desc`,{},token); root.innerHTML=`<p class="eyebrow">CREATOR DASHBOARD</p><h1>${esc(profile.display_name)}</h1><p>Your bio link: <a href="/c/${esc(profile.handle)}" target="_blank">${location.origin}/c/${esc(profile.handle)}</a></p><form data-prompt class="auth-form"><h2>Add prompt</h2><label>Keyword<input name="keyword" required maxlength="80"></label><label>Title<input name="title" required maxlength="140"></label><label>Prompt<textarea name="prompt" required maxlength="12000"></textarea></label><label>Status<select name="status"><option value="draft">Draft</option><option value="published">Published</option></select></label><button class="button">Save prompt</button><p class="muted" data-message></p></form><h2>Your prompts</h2><div>${prompts.map(x=>`<article class="card"><strong>${esc(x.keyword)}</strong> · ${esc(x.status)}<br>${esc(x.title)}</article>`).join('')||'<p class="muted">No prompts yet.</p>'}</div>`; root.querySelector('[data-prompt]').addEventListener('submit',async e=>{e.preventDefault();const f=new FormData(e.target);try{await api('/rest/v1/prompts',{method:'POST',headers:{Prefer:'return=minimal'},body:JSON.stringify({creator_id:me.id,keyword:f.get('keyword').trim().toLowerCase(),title:f.get('title'),prompt:f.get('prompt'),status:f.get('status')})},token);location.reload()}catch(err){root.querySelector('[data-message]').textContent=err.message}}); }catch(err){root.innerHTML=`<h1>Could not load dashboard</h1><p>${esc(err.message)}</p>`;} };
+const initDashboard = async () => {
+  const root = document.querySelector('[data-dashboard]'); if (!root) return;
+  try {
+    const me = await user(); if (!me) return go('/creator/login');
+    const token = session().access_token;
+    let profile = (await api('/rest/v1/creator_profiles?select=*&id=eq.' + me.id, {}, token))[0];
+    if (!profile) {
+      root.classList.add('creator-page');
+      root.innerHTML = '<div class="creator-shell creator-setup"><p class="premium-kicker">PROMPTHUB CREATOR</p><h1>Build your prompt home.</h1><p class="premium-lead">Choose a clean permanent link for your audience.</p><form data-profile class="creator-form premium-card"><label>Display name<input name="display_name" required maxlength="80" placeholder="Your creator name"></label><label>Bio link handle<input name="handle" required pattern="[a-z0-9-]{3,30}" placeholder="your-name"></label><label>Short bio<textarea name="bio" maxlength="240" placeholder="What prompts can viewers find here?"></textarea></label><button class="button">Create my creator page</button><p class="muted" data-message></p></form></div>';
+      root.querySelector('[data-profile]').addEventListener('submit', async event => {
+        event.preventDefault(); const form = new FormData(event.target);
+        try {
+          await api('/rest/v1/creator_profiles', {method:'POST',headers:{Prefer:'return=minimal'},body:JSON.stringify({id:me.id,display_name:form.get('display_name'),handle:form.get('handle').toLowerCase(),bio:form.get('bio')})}, token);
+          await api('/rest/v1/creator_monetization', {method:'POST',headers:{Prefer:'return=minimal'},body:JSON.stringify({creator_id:me.id})}, token);
+          location.reload();
+        } catch(error) { root.querySelector('[data-message]').textContent = error.message; }
+      });
+      return;
+    }
+    const prompts = await api('/rest/v1/prompts?select=*&creator_id=eq.' + me.id + '&order=updated_at.desc', {}, token);
+    const published = prompts.filter(prompt => prompt.status === 'published').length;
+    const pageUrl = location.origin + '/c/' + profile.handle;
+    root.classList.add('creator-page');
+    root.innerHTML = '<div class="creator-shell">'
+      + '<section class="creator-hero"><div><p class="premium-kicker">CREATOR STUDIO</p><h1>' + esc(profile.display_name) + '</h1><p class="premium-lead">Your audience gets one simple link. You control every prompt behind it.</p></div><div class="creator-hero-stats"><span><strong>' + prompts.length + '</strong> prompts</span><span><strong>' + published + '</strong> live</span></div></section>'
+      + '<section class="creator-link premium-card"><div><p class="premium-kicker">YOUR BIO LINK</p><strong>' + esc(pageUrl) + '</strong><small>Paste this in your Instagram, YouTube or TikTok bio.</small></div><div class="creator-link-actions"><a class="button secondary" target="_blank" href="/c/' + esc(profile.handle) + '">Preview</a><button class="button" data-copy-link="' + esc(pageUrl) + '">Copy link</button></div></section>'
+      + '<div class="creator-workspace"><form data-prompt class="creator-form premium-card"><div class="form-heading"><p class="premium-kicker">NEW PROMPT</p><h2>Add a prompt</h2><p>Use the keyword you say in your reel.</p></div><label>Keyword<input name="keyword" required maxlength="80" placeholder="e.g. saree"></label><label>Prompt title<input name="title" required maxlength="140" placeholder="e.g. Golden saree portrait"></label><label>Exact AI prompt<textarea name="prompt" required maxlength="12000" placeholder="Write the full prompt your viewer should copy."></textarea></label><label>Visibility<select name="status"><option value="draft">Draft — only you can see it</option><option value="published">Published — viewers can find it</option></select></label><button class="button">Save prompt</button><p class="muted" data-message></p></form>'
+      + '<section class="creator-library"><div class="library-heading"><div><p class="premium-kicker">LIBRARY</p><h2>Your prompts</h2></div><span>' + prompts.length + ' total</span></div><div class="prompt-card-grid">' + (prompts.map(prompt => '<article class="premium-card prompt-mini"><span class="status-dot ' + esc(prompt.status) + '">' + esc(prompt.status) + '</span><strong>' + esc(prompt.keyword) + '</strong><h3>' + esc(prompt.title) + '</h3><p>' + esc(prompt.prompt).slice(0, 130) + (prompt.prompt.length > 130 ? '…' : '') + '</p></article>').join('') || '<div class="premium-card empty-premium"><strong>Your first prompt starts here.</strong><p>Add a keyword and exact prompt. Your viewers will search that keyword on your bio link.</p></div>') + '</div></section></div></div>';
+    root.querySelector('[data-copy-link]')?.addEventListener('click', async event => {
+      await navigator.clipboard.writeText(event.currentTarget.dataset.copyLink); event.currentTarget.textContent = 'Copied';
+    });
+    root.querySelector('[data-prompt]').addEventListener('submit', async event => {
+      event.preventDefault(); const form = new FormData(event.target);
+      try {
+        await api('/rest/v1/prompts', {method:'POST',headers:{Prefer:'return=minimal'},body:JSON.stringify({creator_id:me.id,keyword:form.get('keyword').trim().toLowerCase(),title:form.get('title'),prompt:form.get('prompt'),status:form.get('status')})}, token);
+        location.reload();
+      } catch(error) { root.querySelector('[data-message]').textContent = error.message; }
+    });
+  } catch(error) { root.innerHTML = '<section class="premium-card"><h1>Could not load your creator studio</h1><p>' + esc(error.message) + '</p></section>'; }
+};
 const initAdmin = async () => {
   const root = document.querySelector('[data-admin]'); if (!root) return;
   try {
@@ -95,7 +134,25 @@ initDashboard();initAdmin();
 
 
 
-const initPublic=async()=>{const root=document.querySelector('[data-public-creator]');if(!root)return;const handle=root.dataset.publicCreator;try{const profiles=await api(`/rest/v1/creator_profiles?select=id,handle,display_name,bio&handle=eq.${encodeURIComponent(handle)}&is_active=eq.true`);const owner=profiles[0];if(!owner){root.innerHTML='<h1>Creator page not found</h1>';return;}void track(handle,'visit');const q=new URLSearchParams(location.search).get('q')?.trim().toLowerCase()||'';let item=null;if(q){const list=await api(`/rest/v1/prompts?select=keyword,title,prompt&creator_id=eq.${owner.id}&keyword=eq.${encodeURIComponent(q)}&status=eq.published`);item=list[0];}root.innerHTML=`<p class="eyebrow">${esc(owner.display_name)}</p><h1>Enter the keyword.</h1><p>${esc(owner.bio||'Find the exact AI prompt from this creator.')}</p><form class="search"><input name="q" value="${esc(q)}" placeholder="e.g. saree" required><button class="button">Get prompt →</button></form>${q?(item?`<article class="card"><h2>${esc(item.title)}</h2><pre>${esc(item.prompt)}</pre><button class="button" data-copy>Copy prompt</button></article>`:'<p class="muted">No published prompt uses that keyword yet.</p>'):''}`;root.querySelector('[data-copy]')?.addEventListener('click',async e=>{await navigator.clipboard.writeText(e.target.previousElementSibling.textContent);e.target.textContent='Copied';void track(handle,'copy');});}catch(err){root.innerHTML=`<h1>Temporarily unavailable</h1><p>${esc(err.message)}</p>`;}};
+const initPublic = async () => {
+  const root = document.querySelector('[data-public-creator]'); if (!root) return;
+  const handle = root.dataset.publicCreator;
+  try {
+    const profiles = await api('/rest/v1/creator_profiles?select=id,handle,display_name,bio&handle=eq.' + encodeURIComponent(handle) + '&is_active=eq.true');
+    const owner = profiles[0]; if (!owner) { root.innerHTML = '<section class="bio-shell"><div class="bio-empty">Creator page not found.</div></section>'; return; }
+    void track(handle, 'visit');
+    const query = new URLSearchParams(location.search).get('q')?.trim().toLowerCase() || '';
+    let item = null;
+    if (query) item = (await api('/rest/v1/prompts?select=keyword,title,prompt&creator_id=eq.' + owner.id + '&keyword=eq.' + encodeURIComponent(query) + '&status=eq.published'))[0];
+    const initial = esc(owner.display_name).slice(0, 1).toUpperCase();
+    root.classList.add('bio-page');
+    root.innerHTML = '<div class="bio-shell"><section class="bio-hero"><div class="bio-avatar">' + initial + '</div><div class="bio-title"><p class="premium-kicker">PROMPT COLLECTION</p><h1>' + esc(owner.display_name) + '</h1><p>' + esc(owner.bio || 'Find the exact AI prompt from this creator.') + '</p><span class="bio-trust">Curated prompts · instant copy</span></div></section><section class="bio-search premium-card"><div><p class="premium-kicker">FIND A PROMPT</p><h2>What did you see in the reel?</h2><p>Enter the keyword the creator mentioned.</p></div><form class="search"><input name="q" value="' + esc(query) + '" placeholder="Try a keyword…" required autocomplete="off"><button class="button">Find prompt</button></form></section>'
+      + (query ? (item ? '<section class="bio-result premium-card"><div class="result-heading"><div><p class="premium-kicker">MATCH FOUND</p><h2>' + esc(item.title) + '</h2><span class="keyword-chip">' + esc(item.keyword) + '</span></div><button class="button" data-copy>Copy prompt</button></div><pre>' + esc(item.prompt) + '</pre><p class="copy-note">Paste this into your preferred AI image tool and adapt the details as needed.</p></section>' : '<section class="premium-card bio-empty"><strong>No prompt found for “' + esc(query) + '”.</strong><p>Check the reel keyword spelling, then try again.</p></section>') : '<section class="bio-hint"><span>✦</span><p>Type the keyword from the reel to unlock the full prompt.</p></section>') + '<div class="bio-ad-slot">ADVERTISEMENT <span>Creator-supported prompt library</span></div></div>';
+    root.querySelector('[data-copy]')?.addEventListener('click', async event => {
+      await navigator.clipboard.writeText(item.prompt); event.target.textContent = 'Copied'; void track(handle, 'copy');
+    });
+  } catch(error) { root.innerHTML = '<section class="bio-shell"><div class="bio-empty">This creator page is temporarily unavailable.</div></section>'; }
+};
 initPublic();
 
 const paise = value => Math.round(Number(value || 0) * 100);
