@@ -1,9 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { normalizeKeyword, validatePrompt, calculateEarnings, monetizationProgress } from '../lib/domain.js';
+import { normalizeKeyword, validatePrompt, calculateEarnings, monetizationProgress, calculateLedger } from '../lib/domain.js';
 test('normalizes keyword casing and Unicode spacing', () => assert.equal(normalizeKeyword('  SAREE  '), 'saree'));
 test('supports Devanagari keyword', () => assert.equal(validatePrompt({keyword:'साड़ी',title:'Saree',body:'prompt',status:'draft'}).keyword, 'साड़ी'));
 test('rejects unsafe keyword spaces', () => assert.throws(() => validatePrompt({keyword:'saree look',title:'Saree',body:'prompt',status:'draft'})));
 test('calculates earnings transparently', () => assert.deepEqual(calculateEarnings({pageViews:10000,slots:1,fillRate:70,ecpm:1,creatorShare:50}), {impressions:7000,revenue:7,creator:3.5,platform:3.5}));
-test('does not enable monetization until both thresholds are met', () => assert.equal(monetizationProgress({publishedPrompts:10,measuredVisitors:4999}).status, 'not_eligible'));
-test('sends qualifying creators to review, not payout', () => assert.equal(monetizationProgress({publishedPrompts:10,measuredVisitors:5000}).status, 'eligible_for_review'));
+test('schedules monetization next calendar month after 50k visitors', () => assert.equal(monetizationProgress({currentMonthVisitors:50000,previousMonthVisitors:0}).status, 'scheduled'));
+test('enables monetization only after the qualifying month is complete', () => assert.equal(monetizationProgress({currentMonthVisitors:0,previousMonthVisitors:50000}).status, 'monetized'));
+test('shares net distributable revenue, not gross revenue', () => assert.deepEqual(calculateLedger({grossRevenuePaise:100000,invalidTrafficPaise:10000,taxDeductionsPaise:5000,directCostsPaise:5000}), {netDistributablePaise:80000,creatorSharePaise:40000,platformSharePaise:40000}));
