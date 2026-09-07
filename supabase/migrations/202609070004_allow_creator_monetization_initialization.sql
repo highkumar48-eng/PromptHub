@@ -1,0 +1,1 @@
+create policy "creator initializes own monetization" on public.creator_monetization for insert with check (creator_id = (select auth.uid()) and status = 'tracking' and eligibility_threshold = 50000 and revenue_share_percent = 50.00 and monetized_from is null);
