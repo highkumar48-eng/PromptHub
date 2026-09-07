@@ -81,12 +81,21 @@ const initDashboard = async () => {
     root.innerHTML = '<div class="creator-shell">'
       + '<section class="creator-hero"><div><p class="premium-kicker">CREATOR STUDIO</p><h1>' + esc(profile.display_name) + '</h1><p class="premium-lead">Your audience gets one simple link. You control every prompt behind it.</p></div><div class="creator-hero-stats"><span><strong>' + prompts.length + '</strong> prompts</span><span><strong>' + published + '</strong> live</span></div></section>'
       + '<section class="creator-link premium-card"><div><p class="premium-kicker">YOUR BIO LINK</p><strong>' + esc(pageUrl) + '</strong><small>Paste this in your Instagram, YouTube or TikTok bio.</small></div><div class="creator-link-actions"><a class="button secondary" target="_blank" href="/c/' + esc(profile.handle) + '">Preview</a><button class="button" data-copy-link="' + esc(pageUrl) + '">Copy link</button></div></section>'
+      + '<section class="premium-card creator-security"><p class="premium-kicker">ACCOUNT SECURITY</p><h2>Password</h2><p>Optional: send a private link to set or reset your PromptHub password.</p><button class="button secondary" type="button" data-password-reset>Set or reset password</button><p class="muted" data-password-reset-message></p></section>'
       + '<div class="creator-workspace"><form data-prompt class="creator-form premium-card"><div class="form-heading"><p class="premium-kicker">NEW PROMPT</p><h2>Add a prompt</h2><p>Use the keyword you say in your reel.</p></div><label>Keyword<input name="keyword" required maxlength="80" placeholder="e.g. saree"></label><label>Prompt title<input name="title" required maxlength="140" placeholder="e.g. Golden saree portrait"></label><label>Exact AI prompt<textarea name="prompt" required maxlength="12000" placeholder="Write the full prompt your viewer should copy."></textarea></label><label>Visibility<select name="status"><option value="draft">Draft — only you can see it</option><option value="published">Published — viewers can find it</option></select></label><button class="button">Save prompt</button><p class="muted" data-message></p></form>'
       + '<section class="creator-library"><div class="library-heading"><div><p class="premium-kicker">LIBRARY</p><h2>Your prompts</h2></div><span>' + prompts.length + ' total</span></div><div class="prompt-card-grid">' + (prompts.map(prompt => '<article class="premium-card prompt-mini"><span class="status-dot ' + esc(prompt.status) + '">' + esc(prompt.status) + '</span><strong>' + esc(prompt.keyword) + '</strong><h3>' + esc(prompt.title) + '</h3><p>' + esc(prompt.prompt).slice(0, 130) + (prompt.prompt.length > 130 ? '…' : '') + '</p></article>').join('') || '<div class="premium-card empty-premium"><strong>Your first prompt starts here.</strong><p>Add a keyword and exact prompt. Your viewers will search that keyword on your bio link.</p></div>') + '</div></section></div></div>';
     root.querySelector('[data-copy-link]')?.addEventListener('click', async event => {
       await navigator.clipboard.writeText(event.currentTarget.dataset.copyLink); event.currentTarget.textContent = 'Copied';
     });
-    root.querySelector('[data-prompt]').addEventListener('submit', async event => {
+    root.querySelector('[data-password-reset]')?.addEventListener('click', async event => {
+      const button = event.currentTarget, message = root.querySelector('[data-password-reset-message]');
+      button.disabled = true; message.textContent = 'Sending your private password link…';
+      try {
+        await api('/auth/v1/recover', {method:'POST',body:JSON.stringify({email:me.email,redirect_to:location.origin + '/creator/set-password'})});
+        message.textContent = 'Check your email and open the link to set or reset your password.';
+      } catch(error) { message.textContent = authEmailMessage(error); }
+      finally { button.disabled = false; }
+    });    root.querySelector('[data-prompt]').addEventListener('submit', async event => {
       event.preventDefault(); const form = new FormData(event.target);
       try {
         await api('/rest/v1/prompts', {method:'POST',headers:{Prefer:'return=minimal'},body:JSON.stringify({creator_id:me.id,keyword:form.get('keyword').trim().toLowerCase(),title:form.get('title'),prompt:form.get('prompt'),status:form.get('status')})}, token);
