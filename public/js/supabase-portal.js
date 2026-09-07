@@ -9,7 +9,51 @@ const save = session => localStorage.setItem('prompthub_session', JSON.stringify
 const session = () => JSON.parse(localStorage.getItem('prompthub_session') || 'null');
 const user = async () => { const s=session(); return s ? api('/auth/v1/user',{},s.access_token) : null; };
 const go = path => location.assign(path);
-for (const form of document.querySelectorAll('[data-auth]')) form.addEventListener('submit', async e => { e.preventDefault(); const mode=e.submitter?.value || 'signin', data=new FormData(form), message=form.querySelector('[data-auth-message]'); message.textContent='Please wait…'; try { const endpoint=mode==='signup'?'/auth/v1/signup':'/auth/v1/token?grant_type=password'; const body=mode==='signup'?{email:data.get('email'),password:data.get('password')}:{email:data.get('email'),password:data.get('password')}; const result=await api(endpoint,{method:'POST',body:JSON.stringify(body)}); if(mode==='signup' && !result.access_token){ message.textContent='Check your email, confirm your account, then sign in.'; return; } save(result); if(form.dataset.auth==='admin') { const roles=await api('/rest/v1/app_roles?select=role',{},result.access_token); if(!roles.some(x=>x.role==='admin')) throw new Error('This account is not an administrator.'); go('/admin'); } else go('/dashboard'); } catch(err){ message.textContent=err.message; } });
+for (const form of document.querySelectorAll('[data-auth]')) form.addEventListener('submit', async event => {
+  event.preventDefault(); const data = new FormData(form), message = form.querySelector('[data-auth-message]');
+  message.textContent = 'Please wait…';
+  try {
+    const result = await api('/auth/v1/token?grant_type=password', {method:'POST',body:JSON.stringify({email:data.get('email'),password:data.get('password')})});
+    save(result);
+    if (form.dataset.auth === 'admin') {
+      const roles = await api('/rest/v1/app_roles?select=role', {}, result.access_token);
+      if (!roles.some(row => row.role === 'admin')) throw new Error('This account is not an administrator.');
+      go('/admin');
+    } else go('/dashboard');
+  } catch(error) { message.textContent = error.message; }
+});
+document.querySelector('[data-email-setup]')?.addEventListener('submit', async event => {
+  event.preventDefault(); const form = event.currentTarget, email = new FormData(form).get('email'), message = form.querySelector('[data-setup-message]');
+  message.textContent = 'Sending secure setup link…';
+  try {
+    await api('/auth/v1/otp', {method:'POST',body:JSON.stringify({email,create_user:true,redirect_to:location.origin + '/creator/set-password'})});
+    message.textContent = 'Check your email and open the secure link to create your password.';
+  } catch(error) { message.textContent = error.message; }
+});
+document.querySelector('[data-forgot-password]')?.addEventListener('click', async event => {
+  const form = event.currentTarget.closest('[data-auth]'), email = new FormData(form).get('email'), message = form.querySelector('[data-auth-message]');
+  if (!email) { message.textContent = 'Enter your email first, then choose Forgot password.'; return; }
+  message.textContent = 'Sending password reset link…';
+  try {
+    await api('/auth/v1/recover', {method:'POST',body:JSON.stringify({email,redirect_to:location.origin + '/creator/set-password'})});
+    message.textContent = 'Check your email and open the password reset link.';
+  } catch(error) { message.textContent = error.message; }
+});
+const passwordSetup = document.querySelector('[data-password-setup]');
+if (passwordSetup) {
+  const hash = new URLSearchParams(location.hash.slice(1));
+  if (hash.get('access_token')) save({access_token:hash.get('access_token'),refresh_token:hash.get('refresh_token')});
+  passwordSetup.addEventListener('submit', async event => {
+    event.preventDefault(); const form = new FormData(passwordSetup), message = passwordSetup.querySelector('[data-password-message]');
+    if (!session()) { message.textContent = 'Open the exact secure link from your email to set a password.'; return; }
+    if (form.get('password') !== form.get('confirm_password')) { message.textContent = 'Passwords do not match.'; return; }
+    message.textContent = 'Saving password…';
+    try {
+      await api('/auth/v1/user', {method:'PUT',body:JSON.stringify({password:form.get('password')})}, session().access_token);
+      message.textContent = 'Password saved. Opening your creator studio…'; setTimeout(() => go('/dashboard'), 600);
+    } catch(error) { message.textContent = error.message; }
+  });
+}
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const initDashboard = async () => {
   const root = document.querySelector('[data-dashboard]'); if (!root) return;
