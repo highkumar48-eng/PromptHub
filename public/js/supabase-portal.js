@@ -9,6 +9,9 @@ const save = session => localStorage.setItem('prompthub_session', JSON.stringify
 const session = () => JSON.parse(localStorage.getItem('prompthub_session') || 'null');
 const user = async () => { const s=session(); return s ? api('/auth/v1/user',{},s.access_token) : null; };
 const go = path => location.assign(path);
+const authEmailMessage = error => /email rate limit exceeded/i.test(error.message)
+  ? 'Email sending is temporarily paused to protect the account. Use the most recent email already in your inbox; otherwise wait before requesting another link.'
+  : error.message;
 for (const form of document.querySelectorAll('[data-auth]')) form.addEventListener('submit', async event => {
   event.preventDefault(); const data = new FormData(form), message = form.querySelector('[data-auth-message]');
   message.textContent = 'Please wait…';
@@ -20,7 +23,7 @@ for (const form of document.querySelectorAll('[data-auth]')) form.addEventListen
       if (!roles.some(row => row.role === 'admin')) throw new Error('This account is not an administrator.');
       go('/admin');
     } else go('/dashboard');
-  } catch(error) { message.textContent = error.message; }
+  } catch(error) { message.textContent = authEmailMessage(error); }
 });
 document.querySelector('[data-email-setup]')?.addEventListener('submit', async event => {
   event.preventDefault(); const form = event.currentTarget, email = new FormData(form).get('email'), message = form.querySelector('[data-setup-message]');
@@ -28,7 +31,7 @@ document.querySelector('[data-email-setup]')?.addEventListener('submit', async e
   try {
     await api('/auth/v1/otp', {method:'POST',body:JSON.stringify({email,create_user:true,redirect_to:location.origin + '/creator/set-password'})});
     message.textContent = 'Check your email and open the secure link to create your password.';
-  } catch(error) { message.textContent = error.message; }
+  } catch(error) { message.textContent = authEmailMessage(error); }
 });
 document.querySelector('[data-forgot-password]')?.addEventListener('click', async event => {
   const form = event.currentTarget.closest('[data-auth]'), email = new FormData(form).get('email'), message = form.querySelector('[data-auth-message]');
@@ -37,7 +40,7 @@ document.querySelector('[data-forgot-password]')?.addEventListener('click', asyn
   try {
     await api('/auth/v1/recover', {method:'POST',body:JSON.stringify({email,redirect_to:location.origin + '/creator/set-password'})});
     message.textContent = 'Check your email and open the password reset link.';
-  } catch(error) { message.textContent = error.message; }
+  } catch(error) { message.textContent = authEmailMessage(error); }
 });
 const passwordSetup = document.querySelector('[data-password-setup]');
 if (passwordSetup) {
