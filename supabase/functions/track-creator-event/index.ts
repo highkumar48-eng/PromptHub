@@ -5,6 +5,7 @@ const corsHeaders = {
 };
 
 const windows = new Map<string, { count: number; started: number }>();
+const profileCache = new Map<string, { id: string; expires: number }>();
 const withinLimit = (key: string) => {
   const now = Date.now();
   const current = windows.get(key);
@@ -14,6 +15,25 @@ const withinLimit = (key: string) => {
   }
   current.count += 1;
   return current.count <= 20;
+};
+
+const cachedProfileId = async (url: string, key: string, handle: string) => {
+  const now = Date.now();
+  const cached = profileCache.get(handle);
+  if (cached && cached.expires > now) return cached.id;
+
+  const profileResponse = await fetch(`${url}/rest/v1/creator_profiles?select=id&handle=eq.${encodeURIComponent(handle)}&is_active=eq.true`, {
+    headers: { apikey: key },
+  });
+  const profiles = await profileResponse.json();
+  if (!profileResponse.ok || !profiles[0]) return '';
+
+  if (profileCache.size > 1000) {
+    const oldest = profileCache.keys().next().value;
+    if (oldest) profileCache.delete(oldest);
+  }
+  profileCache.set(handle, { id: profiles[0].id, expires: now + 300_000 });
+  return profiles[0].id;
 };
 
 const sha256 = async (value: string) => {
@@ -44,18 +64,15 @@ Deno.serve(async request => {
     const url = Deno.env.get('SUPABASE_URL')!;
     const key = secretKey();
     if (!key) throw new Error('Tracking service is not configured');
-    const profileResponse = await fetch(`${url}/rest/v1/creator_profiles?select=id&handle=eq.${encodeURIComponent(handle)}&is_active=eq.true`, {
-      headers: { apikey: key },
-    });
-    const profiles = await profileResponse.json();
-    if (!profileResponse.ok || !profiles[0]) return Response.json({ tracked: false }, { headers: corsHeaders });
+    const creatorId = await cachedProfileId(url, key, handle);
+    if (!creatorId) return Response.json({ tracked: false }, { headers: corsHeaders });
 
     const date = new Date().toISOString().slice(0, 10);
     const fingerprint = await sha256(`${key}:${date}:${sourceIp}:${request.headers.get('user-agent') || ''}`);
     const response = await fetch(`${url}/rest/v1/rpc/track_creator_event`, {
       method: 'POST',
       headers: { apikey: key, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ p_creator_id: profiles[0].id, p_visitor_hash: fingerprint, p_event: event }),
+      body: JSON.stringify({ p_creator_id: creatorId, p_visitor_hash: fingerprint, p_event: event }),
     });
     if (!response.ok) throw new Error('Could not record event');
     return new Response(await response.text(), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });

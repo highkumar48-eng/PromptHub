@@ -3,6 +3,15 @@ const key = document.querySelector('meta[name="prompthub-supabase-key"]')?.conte
 const siteUrl = (document.querySelector('meta[name="prompthub-site-url"]')?.content || location.origin).replace(/\/$/, '');
 const adsenseClient = document.querySelector('meta[name="prompthub-adsense-client"]')?.content || '';
 const adsenseSlot = document.querySelector('meta[name="prompthub-adsense-slot"]')?.content || '';
+const fetchWithTimeout = async (resource, options = {}, timeoutMs = 10_000) => {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(resource, { ...options, signal: controller.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+};
 const loadAdsense = () => {
   if (!adsenseClient || document.querySelector('script[data-prompthub-adsense]')) return;
   const script = document.createElement('script');
@@ -13,7 +22,7 @@ const loadAdsense = () => {
   document.head.appendChild(script);
 };
 const api = async (path, options = {}, token = key) => {
-  const r = await fetch(url + path, { ...options, headers: { apikey:key, Authorization:`Bearer ${token}`, 'Content-Type':'application/json', ...(options.headers||{}) } });
+  const r = await fetchWithTimeout(url + path, { ...options, headers: { apikey:key, Authorization:`Bearer ${token}`, 'Content-Type':'application/json', ...(options.headers||{}) } });
   const body = await r.json().catch(()=>({}));
   if(!r.ok) {
     const error = new Error(body.msg || body.message || body.error_description || 'Request failed.');
@@ -22,7 +31,7 @@ const api = async (path, options = {}, token = key) => {
   }
   return body;
 };
-const track = (handle, event) => fetch(`${url}/functions/v1/track-creator-event`, { method:'POST', headers:{apikey:key,'Content-Type':'application/json'}, body:JSON.stringify({handle,event}) }).catch(() => undefined);
+const track = (handle, event) => fetchWithTimeout(`${url}/functions/v1/track-creator-event`, { method:'POST', keepalive:true, headers:{apikey:key,'Content-Type':'application/json'}, body:JSON.stringify({handle,event}) }, 5_000).catch(() => undefined);
 const save = session => localStorage.setItem('prompthub_session', JSON.stringify(session));
 const session = () => JSON.parse(localStorage.getItem('prompthub_session') || 'null');
 const clearSession = () => localStorage.removeItem('prompthub_session');
