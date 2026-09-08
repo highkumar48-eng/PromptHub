@@ -81,7 +81,7 @@ const initDashboard = async () => {
     const published = prompts.filter(prompt => prompt.status === 'published').length;
     const pageUrl = siteUrl + '/c/' + profile.handle;
     root.classList.add('creator-page');
-    root.innerHTML = '<aside class="creator-sidebar"><div class="creator-sidebar-brand"><span class="sidebar-mark">P</span><div><strong>PromptHub</strong><small>CREATOR STUDIO</small></div></div><nav class="creator-sidebar-nav"><a class="active" href="#studio"><span>▦</span>Studio</a><a href="#profile"><span>◉</span>Profile</a></nav><div class="creator-sidebar-foot"><span class="sidebar-avatar">' + esc((profile.display_name || 'C').slice(0,1).toUpperCase()) + '</span><small>' + esc(profile.display_name) + '</small></div></aside><div class="creator-shell">'
+    root.innerHTML = '<aside class="creator-sidebar"><div class="creator-sidebar-brand"><span class="sidebar-mark">P</span><div><strong>PromptHub</strong><small>CREATOR STUDIO</small></div></div><nav class="creator-sidebar-nav"><a class="active" data-creator-view="studio" href="#studio"><span>▦</span>Studio</a><a data-creator-view="profile" href="#profile"><span>◉</span>Profile</a></nav><div class="creator-sidebar-foot"><span class="sidebar-avatar">' + esc((profile.display_name || 'C').slice(0,1).toUpperCase()) + '</span><small>' + esc(profile.display_name) + '</small></div></aside><div id="studio" class="creator-shell">'
       + '<section class="creator-hero"><div><p class="premium-kicker">CREATOR STUDIO</p><h1>' + esc(profile.display_name) + '</h1><p class="premium-lead">Your audience gets one simple link. You control every prompt behind it.</p></div><div class="creator-hero-stats"><span><strong>' + prompts.length + '</strong> prompts</span><span><strong>' + published + '</strong> live</span></div></section>'
       + '<section class="creator-link premium-card"><div><p class="premium-kicker">YOUR BIO LINK</p><strong>' + esc(pageUrl) + '</strong><small>Paste this in your Instagram, YouTube or TikTok bio.</small></div><div class="creator-link-actions"><a class="button secondary" target="_blank" href="/c/' + esc(profile.handle) + '">Preview</a><button class="button" data-copy-link="' + esc(pageUrl) + '">Copy link</button></div></section>'
       + '<section id="profile" class="premium-card creator-security"><p class="premium-kicker">PROFILE & SECURITY</p><h2>Account settings</h2><p>Manage your creator identity and send a private link to set or reset your PromptHub password.</p><button class="button secondary" type="button" data-password-reset>Set or reset password</button><p class="muted" data-password-reset-message></p></section>'
@@ -90,6 +90,13 @@ const initDashboard = async () => {
     root.querySelector('[data-copy-link]')?.addEventListener('click', async event => {
       await navigator.clipboard.writeText(event.currentTarget.dataset.copyLink); event.currentTarget.textContent = 'Copied';
     });
+    const setCreatorView = view => {
+      root.classList.toggle('profile-only', view === 'profile');
+      root.querySelectorAll('[data-creator-view]').forEach(link => link.classList.toggle('active', link.dataset.creatorView === view));
+      if (view === 'profile') root.querySelector('#profile')?.scrollIntoView({behavior:'smooth', block:'start'});
+      else window.scrollTo({top:0, behavior:'smooth'});
+    };
+    root.querySelectorAll('[data-creator-view]').forEach(link => link.addEventListener('click', event => { event.preventDefault(); setCreatorView(link.dataset.creatorView); }));
     root.querySelector('[data-password-reset]')?.addEventListener('click', async event => {
       const button = event.currentTarget, message = root.querySelector('[data-password-reset-message]');
       button.disabled = true; message.textContent = 'Sending your private password link…';
