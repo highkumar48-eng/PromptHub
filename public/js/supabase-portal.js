@@ -15,6 +15,7 @@ if (authHash.get('access_token')) {
   history.replaceState({}, document.title, location.pathname + location.search);
   if (document.querySelector('[data-magic-link]')) go('/dashboard');
 }
+if (document.querySelector('[data-magic-link]') && session()) go('/dashboard');
 const authEmailMessage = error => /email rate limit exceeded/i.test(error.message)
   ? 'Email sending is temporarily paused to protect the account. Use the most recent email already in your inbox; otherwise wait before requesting another link.'
   : error.message;
