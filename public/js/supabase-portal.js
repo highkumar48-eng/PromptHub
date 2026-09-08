@@ -14,12 +14,42 @@ const loadAdsense = () => {
 };
 const api = async (path, options = {}, token = key) => {
   const r = await fetch(url + path, { ...options, headers: { apikey:key, Authorization:`Bearer ${token}`, 'Content-Type':'application/json', ...(options.headers||{}) } });
-  const body = await r.json().catch(()=>({})); if(!r.ok) throw new Error(body.msg || body.message || body.error_description || 'Request failed.'); return body;
+  const body = await r.json().catch(()=>({}));
+  if(!r.ok) {
+    const error = new Error(body.msg || body.message || body.error_description || 'Request failed.');
+    error.status = r.status;
+    throw error;
+  }
+  return body;
 };
 const track = (handle, event) => fetch(`${url}/functions/v1/track-creator-event`, { method:'POST', headers:{apikey:key,'Content-Type':'application/json'}, body:JSON.stringify({handle,event}) }).catch(() => undefined);
 const save = session => localStorage.setItem('prompthub_session', JSON.stringify(session));
 const session = () => JSON.parse(localStorage.getItem('prompthub_session') || 'null');
-const user = async () => { const s=session(); return s ? api('/auth/v1/user',{},s.access_token) : null; };
+const clearSession = () => localStorage.removeItem('prompthub_session');
+const isAuthError = error => error?.status === 401 || /jwt|token.*expired|invalid.*token|refresh.*token/i.test(error?.message || '');
+const refreshSession = async () => {
+  const current = session();
+  if (!current?.refresh_token) return null;
+  try {
+    const refreshed = await api('/auth/v1/token?grant_type=refresh_token', {method:'POST',body:JSON.stringify({refresh_token:current.refresh_token})});
+    save(refreshed);
+    return refreshed;
+  } catch (error) {
+    if (isAuthError(error)) clearSession();
+    return null;
+  }
+};
+const user = async () => {
+  const current = session();
+  if (!current?.access_token) return null;
+  try {
+    return await api('/auth/v1/user', {}, current.access_token);
+  } catch (error) {
+    if (!isAuthError(error)) throw error;
+    const refreshed = await refreshSession();
+    return refreshed ? api('/auth/v1/user', {}, refreshed.access_token) : null;
+  }
+};
 const go = path => location.assign(path);
 const authHash = new URLSearchParams(location.hash.slice(1));
 if (authHash.get('access_token')) {
@@ -122,7 +152,10 @@ const initDashboard = async () => {
         location.reload();
       } catch(error) { root.querySelector('[data-message]').textContent = error.message; }
     });
-  } catch(error) { root.innerHTML = '<section class="premium-card"><h1>Could not load your creator studio</h1><p>' + esc(error.message) + '</p></section>'; }
+  } catch(error) {
+    if (isAuthError(error)) { clearSession(); return go('/creator/login'); }
+    root.innerHTML = '<section class="premium-card"><h1>Could not load your creator studio</h1><p>' + esc(error.message) + '</p></section>';
+  }
 };
 let adminRefreshTimer;
 let adminLastView = 'overview';
@@ -212,7 +245,10 @@ const initAdmin = async () => {
     root.querySelector('[data-ledger]')?.addEventListener('submit', async event => { event.preventDefault(); const form = new FormData(event.target); const message = event.target.querySelector('[data-message]'); try { await api('/rest/v1/creator_monthly_ledger', {method:'POST',headers:{Prefer:'return=minimal'},body:JSON.stringify({creator_id:form.get('creator_id'),period_start:form.get('period_start'),period_end:form.get('period_end'),visitor_count:Number(form.get('visitor_count')),gross_revenue_paise:paise(form.get('gross')),invalid_traffic_paise:paise(form.get('invalid')),taxes_paise:paise(form.get('taxes')),direct_payout_cost_paise:paise(form.get('fee'))})}, token); location.reload(); } catch(error) { message.textContent = error.message; } });
     root.querySelectorAll('[data-approve]').forEach(button => button.addEventListener('click', async () => { await api('/rest/v1/creator_monthly_ledger?id=eq.' + button.dataset.approve, {method:'PATCH',headers:{Prefer:'return=minimal'},body:JSON.stringify({status:'approved',approved_at:new Date().toISOString()})}, token); location.reload(); }));
     root.querySelectorAll('[data-paid]').forEach(form => form.addEventListener('submit', async event => { event.preventDefault(); const reference = new FormData(form).get('reference').trim(); await api('/rest/v1/creator_monthly_ledger?id=eq.' + form.dataset.paid, {method:'PATCH',headers:{Prefer:'return=minimal'},body:JSON.stringify({status:'paid',paid_at:new Date().toISOString(),payment_reference:reference})}, token); location.reload(); }));
-  } catch(error) { root.innerHTML = '<div class="admin-main"><section class="admin-panel"><h1>Admin access required</h1><p>' + esc(error.message) + '</p></section></div>'; }
+  } catch(error) {
+    if (isAuthError(error)) { clearSession(); return go('/admin/login'); }
+    root.innerHTML = '<div class="admin-main"><section class="admin-panel"><h1>Admin access required</h1><p>' + esc(error.message) + '</p></section></div>';
+  }
 };
 document.querySelector('[data-copy]')?.addEventListener('click',async e=>{await navigator.clipboard.writeText(e.target.previousElementSibling.textContent);e.target.textContent='Copied';});
 initDashboard();initAdmin();
