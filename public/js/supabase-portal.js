@@ -143,7 +143,10 @@ const initDashboard = async () => {
       + '<div class="creator-workspace"><form data-prompt class="creator-form premium-card"><div class="form-heading"><p class="premium-kicker">NEW PROMPT</p><h2>Add a prompt</h2><p>Use the keyword you say in your reel.</p></div><label>Keyword<input name="keyword" required maxlength="80" placeholder="e.g. saree"></label><label>Prompt title<input name="title" required maxlength="140" placeholder="e.g. Golden saree portrait"></label><label>Exact AI prompt<textarea name="prompt" required maxlength="12000" placeholder="Write the full prompt your viewer should copy."></textarea></label><label>Visibility<select name="status"><option value="draft">Draft — only you can see it</option><option value="published">Published — viewers can find it</option></select></label><button class="button">Save prompt</button><p class="muted" data-message></p></form>'
       + '<section class="creator-library"><div class="library-heading"><div><p class="premium-kicker">LIBRARY</p><h2>Your prompts</h2></div><span>' + prompts.length + ' total</span></div><div class="prompt-card-grid">' + (prompts.map(prompt => '<article class="premium-card prompt-mini"><span class="status-dot ' + esc(prompt.status) + '">' + esc(prompt.status) + '</span><strong>' + esc(prompt.keyword) + '</strong><h3>' + esc(prompt.title) + '</h3><p>' + esc(prompt.prompt).slice(0, 130) + (prompt.prompt.length > 130 ? '…' : '') + '</p></article>').join('') || '<div class="premium-card empty-premium"><strong>Your first prompt starts here.</strong><p>Add a keyword and exact prompt. Your viewers will search that keyword on your bio link.</p></div>') + '</div></section></div></div>';
     root.querySelector('[data-copy-link]')?.addEventListener('click', async event => {
-      await navigator.clipboard.writeText(event.currentTarget.dataset.copyLink); event.currentTarget.textContent = 'Copied';
+      const button = event.currentTarget;
+      await navigator.clipboard.writeText(button.dataset.copyLink);
+      button.textContent = 'Copied';
+      setTimeout(() => { button.textContent = 'Copy link'; }, 1400);
     });
     const setCreatorView = view => {
       root.classList.toggle('profile-only', view === 'profile');
@@ -161,11 +164,12 @@ const initDashboard = async () => {
       } catch(error) { message.textContent = authEmailMessage(error); }
       finally { button.disabled = false; }
     });    root.querySelector('[data-prompt]').addEventListener('submit', async event => {
-      event.preventDefault(); const form = new FormData(event.target);
+      event.preventDefault(); const form = new FormData(event.target), saveButton = event.target.querySelector('button');
+      saveButton.disabled = true; saveButton.textContent = 'Saving…';
       try {
         await api('/rest/v1/prompts', {method:'POST',headers:{Prefer:'return=minimal'},body:JSON.stringify({creator_id:me.id,keyword:form.get('keyword').trim().toLowerCase(),title:form.get('title'),prompt:form.get('prompt'),status:form.get('status')})}, token);
         location.reload();
-      } catch(error) { root.querySelector('[data-message]').textContent = error.message; }
+      } catch(error) { root.querySelector('[data-message]').textContent = error.message; saveButton.disabled = false; saveButton.textContent = 'Save prompt'; }
     });
   } catch(error) {
     if (isAuthError(error)) { clearSession(); return go('/creator/login'); }
