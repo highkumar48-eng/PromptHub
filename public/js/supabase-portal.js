@@ -13,6 +13,7 @@ const authHash = new URLSearchParams(location.hash.slice(1));
 if (authHash.get('access_token')) {
   save({access_token:authHash.get('access_token'),refresh_token:authHash.get('refresh_token')});
   history.replaceState({}, document.title, location.pathname + location.search);
+  if (document.querySelector('[data-magic-link]')) go('/dashboard');
 }
 const authEmailMessage = error => /email rate limit exceeded/i.test(error.message)
   ? 'Email sending is temporarily paused to protect the account. Use the most recent email already in your inbox; otherwise wait before requesting another link.'
