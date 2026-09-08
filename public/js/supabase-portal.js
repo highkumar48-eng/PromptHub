@@ -1,6 +1,8 @@
 const url = document.querySelector('meta[name="prompthub-supabase-url"]')?.content;
 const key = document.querySelector('meta[name="prompthub-supabase-key"]')?.content;
 const siteUrl = (document.querySelector('meta[name="prompthub-site-url"]')?.content || location.origin).replace(/\/$/, '');
+const adsenseClient = document.querySelector('meta[name="prompthub-adsense-client"]')?.content || '';
+if (adsenseClient && document.querySelector('.bio-page')) { const script=document.createElement('script'); script.async=true; script.src='https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client='+encodeURIComponent(adsenseClient); script.crossOrigin='anonymous'; document.head.appendChild(script); }
 const api = async (path, options = {}, token = key) => {
   const r = await fetch(url + path, { ...options, headers: { apikey:key, Authorization:`Bearer ${token}`, 'Content-Type':'application/json', ...(options.headers||{}) } });
   const body = await r.json().catch(()=>({})); if(!r.ok) throw new Error(body.msg || body.message || body.error_description || 'Request failed.'); return body;
