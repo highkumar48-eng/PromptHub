@@ -26,6 +26,8 @@ const track = (handle, event) => fetch(`${url}/functions/v1/track-creator-event`
 const save = session => localStorage.setItem('prompthub_session', JSON.stringify(session));
 const session = () => JSON.parse(localStorage.getItem('prompthub_session') || 'null');
 const clearSession = () => localStorage.removeItem('prompthub_session');
+const saveCreatorEmail = email => localStorage.setItem('prompthub_creator_email', String(email || '').trim());
+const rememberedCreatorEmail = () => localStorage.getItem('prompthub_creator_email') || '';
 const isAuthError = error => error?.status === 401 || /jwt|token.*expired|invalid.*token|refresh.*token/i.test(error?.message || '');
 const refreshSession = async () => {
   const current = session();
@@ -57,7 +59,19 @@ if (authHash.get('access_token')) {
   history.replaceState({}, document.title, location.pathname + location.search);
   if (document.querySelector('[data-magic-link]')) go('/dashboard');
 }
-if (document.querySelector('[data-magic-link]') && session()) go('/dashboard');
+const resumeCreatorSession = async () => {
+  const form = document.querySelector('[data-magic-link]');
+  if (!form) return;
+  const input = form.querySelector('input[name="email"]');
+  const message = form.querySelector('[data-magic-message]');
+  if (input && !input.value) input.value = rememberedCreatorEmail();
+  if (!session()) return;
+  message.textContent = 'Opening your saved creator session...';
+  const currentUser = await user();
+  if (currentUser) go('/dashboard');
+  else message.textContent = 'Your saved session expired. Enter your email to get a fresh secure link.';
+};
+void resumeCreatorSession();
 const authEmailMessage = error => /email rate limit exceeded/i.test(error.message)
   ? 'Email sending is temporarily paused to protect the account. Use the most recent email already in your inbox; otherwise wait before requesting another link.'
   : error.message;
@@ -79,6 +93,7 @@ document.querySelector('[data-magic-link]')?.addEventListener('submit', async ev
   const form = event.currentTarget, email = new FormData(form).get('email'), message = form.querySelector('[data-magic-message]');
   message.textContent = 'Sending your secure sign-in link…';
   try {
+    saveCreatorEmail(email);
     await api('/auth/v1/otp', {method:'POST',body:JSON.stringify({email,create_user:true,redirect_to:location.origin + '/dashboard'})});
     message.textContent = 'Check your email and open the secure link to continue.';
   } catch(error) { message.textContent = authEmailMessage(error); }
