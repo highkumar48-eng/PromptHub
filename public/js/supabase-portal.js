@@ -77,12 +77,11 @@ const initDashboard = async () => {
     let profile = (await api('/rest/v1/creator_profiles?select=*&id=eq.' + me.id, {}, token))[0];
     if (!profile) {
       root.classList.add('creator-page');
-      root.innerHTML = '<div class="creator-shell creator-setup"><p class="premium-kicker">PROMPTHUB CREATOR</p><h1>Build your prompt home.</h1><p class="premium-lead">Choose a clean permanent link for your audience.</p><form data-profile class="creator-form premium-card"><label>Display name<input name="display_name" required maxlength="80" placeholder="Your creator name"></label><label>Bio link handle<input name="handle" required pattern="[a-z0-9-]{3,30}" placeholder="your-name"></label><label>Short bio<textarea name="bio" maxlength="240" placeholder="What prompts can viewers find here?"></textarea></label><button class="button">Create my creator page</button><p class="muted" data-message></p></form></div>';
+      root.innerHTML = '<div class="creator-shell creator-setup"><p class="premium-kicker">PROMPTHUB CREATOR</p><h1>Build your prompt home.</h1><p class="premium-lead">Choose the name and bio link your audience will see. After this, add the keywords you mention in your reels.</p><form data-profile class="creator-form premium-card"><label>Display name<input name="display_name" required maxlength="80" placeholder="Your creator name"></label><label>Bio link handle<input name="handle" required pattern="[a-z0-9-]{3,30}" placeholder="your-name"></label><label>Short bio<textarea name="bio" maxlength="240" placeholder="What prompts can viewers find here?"></textarea></label><button class="button">Create my creator page</button><p class="muted" data-message></p></form></div>';
       root.querySelector('[data-profile]').addEventListener('submit', async event => {
         event.preventDefault(); const form = new FormData(event.target);
         try {
           await api('/rest/v1/creator_profiles', {method:'POST',headers:{Prefer:'return=minimal'},body:JSON.stringify({id:me.id,display_name:form.get('display_name'),handle:form.get('handle').toLowerCase(),bio:form.get('bio')})}, token);
-          await api('/rest/v1/creator_monetization', {method:'POST',headers:{Prefer:'return=minimal'},body:JSON.stringify({creator_id:me.id})}, token);
           location.reload();
         } catch(error) { root.querySelector('[data-message]').textContent = error.message; }
       });
@@ -236,7 +235,7 @@ const initPublic = async () => {
     const adUnit = adsenseClient && adsenseSlot
       ? '<ins class="adsbygoogle bio-ad-slot" style="display:block" data-ad-client="' + esc(adsenseClient) + '" data-ad-slot="' + esc(adsenseSlot) + '" data-ad-format="auto" data-full-width-responsive="true"></ins>'
       : '<div class="bio-ad-slot">ADVERTISEMENT <span>Creator-supported prompt library</span></div>';
-    root.innerHTML = '<div class="bio-shell"><section class="bio-hero"><div class="bio-avatar">' + initial + '</div><div class="bio-title"><p class="premium-kicker">PROMPT COLLECTION</p><h1>' + esc(owner.display_name) + '</h1><p>' + esc(owner.bio || 'Find the exact AI prompt from this creator.') + '</p><span class="bio-trust">Curated prompts · instant copy</span></div></section><section class="bio-search premium-card"><div><p class="premium-kicker">FIND A PROMPT</p><h2>What did you see in the reel?</h2><p>Enter the keyword the creator mentioned.</p></div><form class="search"><input name="q" value="' + esc(query) + '" placeholder="Try a keyword…" required autocomplete="off"><button class="button">Find prompt</button></form></section>'
+    root.innerHTML = '<div class="bio-shell"><section class="bio-hero"><div class="bio-avatar">' + initial + '</div><div class="bio-title"><p class="premium-kicker">PROMPT COLLECTION</p><h1>' + esc(owner.display_name) + '</h1><p>' + esc(owner.bio || 'Find the exact AI prompt from this creator.') + '</p><span class="bio-trust">Curated prompts · instant copy</span></div></section><section class="bio-search premium-card"><div><p class="premium-kicker">FIND A PROMPT</p><h2>What did you see in the reel?</h2><p>Enter the keyword the creator mentioned.</p></div><form class="search"><input name="q" value="' + esc(query) + '" placeholder="Try a keyword..." required autocomplete="off"><button class="button">Find prompt</button></form></section>'
       + (query ? (item ? '<section class="bio-result premium-card"><div class="result-heading"><div><p class="premium-kicker">MATCH FOUND</p><h2>' + esc(item.title) + '</h2><span class="keyword-chip">' + esc(item.keyword) + '</span></div><button class="button" data-copy>Copy prompt</button></div><pre>' + esc(item.prompt) + '</pre><p class="copy-note">Paste this into your preferred AI image tool and adapt the details as needed.</p></section>' : '<section class="premium-card bio-empty"><strong>No prompt found for “' + esc(query) + '”.</strong><p>Check the reel keyword spelling, then try again.</p></section>') : '<section class="bio-hint"><span>✦</span><p>Type the keyword from the reel to unlock the full prompt.</p></section>') + adUnit + '</div>';
     if (adsenseClient && adsenseSlot) { try { (window.adsbygoogle = window.adsbygoogle || []).push({}); } catch (_) {} }
     root.querySelector('[data-copy]')?.addEventListener('click', async event => {
@@ -248,28 +247,3 @@ initPublic();
 
 const paise = value => Math.round(Number(value || 0) * 100);
 const money = value => `₹${(Number(value || 0) / 100).toFixed(2)}`;
-const ownProfile = async (me, token) => {
-  const rows = await api(`/rest/v1/creator_profiles?select=*&id=eq.${me.id}`, {}, token);
-  if (rows[0]) return rows[0];
-  const publicRows = await api('/rest/v1/creator_profiles?select=*&is_active=eq.true');
-  return publicRows.find(row => row.id === me.id);
-};
-const enhanceCreatorFinance = async () => {
-  const root = document.querySelector('[data-dashboard]'); if (!root) return;
-  try {
-    const me = await user(); if (!me) return; const token = session().access_token;
-    const profile = await ownProfile(me, token); if (!profile) return;
-    const [payouts, ledgers, metrics, monetization] = await Promise.all([
-      api(`/rest/v1/creator_payout_methods?select=*&creator_id=eq.${me.id}`, {}, token),
-      api(`/rest/v1/creator_monthly_ledger?select=*&creator_id=eq.${me.id}&order=period_start.desc`, {}, token),
-      api(`/rest/v1/creator_daily_metrics?select=unique_visitors,prompt_copies&creator_id=eq.${me.id}`, {}, token),
-      api(`/rest/v1/creator_monetization?select=*&creator_id=eq.${me.id}`, {}, token),
-    ]);
-    const payout = payouts[0] || {}; const totalVisitors = metrics.reduce((sum,row)=>sum + Number(row.unique_visitors), 0);
-    const pending = ledgers.filter(x=>x.status !== 'paid').reduce((sum,row)=>sum + Number(row.creator_share_paise), 0);
-    const paid = ledgers.filter(x=>x.status === 'paid').reduce((sum,row)=>sum + Number(row.creator_share_paise), 0);
-    root.insertAdjacentHTML('beforeend', `<section class="finance-grid"><article class="card"><p class="eyebrow">EARNINGS</p><h2>${money(pending)}</h2><p>Awaiting approval or UPI payout</p><strong>${money(paid)} paid so far</strong></article><article class="card"><p class="eyebrow">MONETIZATION</p><h2>${totalVisitors.toLocaleString()} / ${(monetization[0]?.eligibility_threshold || 50000).toLocaleString()}</h2><p>Unique tracked visitors. Monetization starts the month after your qualifying month.</p></article></section><section class="card payout-card"><p class="eyebrow">YOUR UPI PAYOUT DETAILS</p><h2>Where should we send your earnings?</h2><p class="muted">Only you and PromptHub admin can view this. Payments remain manual UPI until a payout gateway is introduced.</p><form data-upi class="auth-form"><label>UPI ID<input name="upi_id" value="${esc(payout.upi_id || '')}" placeholder="name@bank" required maxlength="200"></label><label>Account holder name<input name="account_holder_name" value="${esc(payout.account_holder_name || '')}" required maxlength="120"></label><button class="button">Save UPI details</button><p class="muted" data-message></p></form></section><section class="card"><p class="eyebrow">TRANSPARENT PAYOUT HISTORY</p><p class="muted">Formula: finalized ad revenue − invalid-traffic reversals − taxes − direct payout fee = net distributable revenue. Creator share is 50% of that amount.</p>${ledgers.map(row=>`<article class="ledger-row"><strong>${esc(row.period_start)} to ${esc(row.period_end)}</strong><span>${money(row.creator_share_paise)} · ${esc(row.status)}</span><small>Gross ${money(row.gross_revenue_paise)} · deductions ${money(Number(row.invalid_traffic_paise)+Number(row.taxes_paise)+Number(row.direct_payout_cost_paise))}${row.payment_reference ? ` · UPI ref ${esc(row.payment_reference)}` : ''}</small></article>`).join('') || '<p class="muted">No finalized earnings yet.</p>'}</section>`);
-    root.querySelector('[data-upi]')?.addEventListener('submit', async event => { event.preventDefault(); const form = new FormData(event.target); const message = event.target.querySelector('[data-message]'); try { await api('/rest/v1/creator_payout_methods', {method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify({creator_id:me.id,upi_id:form.get('upi_id').trim(),account_holder_name:form.get('account_holder_name').trim()})}, token); message.textContent='UPI details saved.'; } catch(error) { message.textContent=error.message; } });
-  } catch (_) {}
-};
-setTimeout(() => { enhanceCreatorFinance(); }, 700);
