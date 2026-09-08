@@ -2,7 +2,16 @@ const url = document.querySelector('meta[name="prompthub-supabase-url"]')?.conte
 const key = document.querySelector('meta[name="prompthub-supabase-key"]')?.content;
 const siteUrl = (document.querySelector('meta[name="prompthub-site-url"]')?.content || location.origin).replace(/\/$/, '');
 const adsenseClient = document.querySelector('meta[name="prompthub-adsense-client"]')?.content || '';
-if (adsenseClient && document.querySelector('.bio-page')) { const script=document.createElement('script'); script.async=true; script.src='https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client='+encodeURIComponent(adsenseClient); script.crossOrigin='anonymous'; document.head.appendChild(script); }
+const adsenseSlot = document.querySelector('meta[name="prompthub-adsense-slot"]')?.content || '';
+const loadAdsense = () => {
+  if (!adsenseClient || document.querySelector('script[data-prompthub-adsense]')) return;
+  const script = document.createElement('script');
+  script.async = true;
+  script.dataset.prompthubAdsense = 'true';
+  script.src = 'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=' + encodeURIComponent(adsenseClient);
+  script.crossOrigin = 'anonymous';
+  document.head.appendChild(script);
+};
 const api = async (path, options = {}, token = key) => {
   const r = await fetch(url + path, { ...options, headers: { apikey:key, Authorization:`Bearer ${token}`, 'Content-Type':'application/json', ...(options.headers||{}) } });
   const body = await r.json().catch(()=>({})); if(!r.ok) throw new Error(body.msg || body.message || body.error_description || 'Request failed.'); return body;
@@ -223,8 +232,13 @@ const initPublic = async () => {
     if (query) item = (await api('/rest/v1/prompts?select=keyword,title,prompt&creator_id=eq.' + owner.id + '&keyword=eq.' + encodeURIComponent(query) + '&status=eq.published'))[0];
     const initial = esc(owner.display_name).slice(0, 1).toUpperCase();
     root.classList.add('bio-page');
+    loadAdsense();
+    const adUnit = adsenseClient && adsenseSlot
+      ? '<ins class="adsbygoogle bio-ad-slot" style="display:block" data-ad-client="' + esc(adsenseClient) + '" data-ad-slot="' + esc(adsenseSlot) + '" data-ad-format="auto" data-full-width-responsive="true"></ins>'
+      : '<div class="bio-ad-slot">ADVERTISEMENT <span>Creator-supported prompt library</span></div>';
     root.innerHTML = '<div class="bio-shell"><section class="bio-hero"><div class="bio-avatar">' + initial + '</div><div class="bio-title"><p class="premium-kicker">PROMPT COLLECTION</p><h1>' + esc(owner.display_name) + '</h1><p>' + esc(owner.bio || 'Find the exact AI prompt from this creator.') + '</p><span class="bio-trust">Curated prompts · instant copy</span></div></section><section class="bio-search premium-card"><div><p class="premium-kicker">FIND A PROMPT</p><h2>What did you see in the reel?</h2><p>Enter the keyword the creator mentioned.</p></div><form class="search"><input name="q" value="' + esc(query) + '" placeholder="Try a keyword…" required autocomplete="off"><button class="button">Find prompt</button></form></section>'
-      + (query ? (item ? '<section class="bio-result premium-card"><div class="result-heading"><div><p class="premium-kicker">MATCH FOUND</p><h2>' + esc(item.title) + '</h2><span class="keyword-chip">' + esc(item.keyword) + '</span></div><button class="button" data-copy>Copy prompt</button></div><pre>' + esc(item.prompt) + '</pre><p class="copy-note">Paste this into your preferred AI image tool and adapt the details as needed.</p></section>' : '<section class="premium-card bio-empty"><strong>No prompt found for “' + esc(query) + '”.</strong><p>Check the reel keyword spelling, then try again.</p></section>') : '<section class="bio-hint"><span>✦</span><p>Type the keyword from the reel to unlock the full prompt.</p></section>') + '<div class="bio-ad-slot">ADVERTISEMENT <span>Creator-supported prompt library</span></div></div>';
+      + (query ? (item ? '<section class="bio-result premium-card"><div class="result-heading"><div><p class="premium-kicker">MATCH FOUND</p><h2>' + esc(item.title) + '</h2><span class="keyword-chip">' + esc(item.keyword) + '</span></div><button class="button" data-copy>Copy prompt</button></div><pre>' + esc(item.prompt) + '</pre><p class="copy-note">Paste this into your preferred AI image tool and adapt the details as needed.</p></section>' : '<section class="premium-card bio-empty"><strong>No prompt found for “' + esc(query) + '”.</strong><p>Check the reel keyword spelling, then try again.</p></section>') : '<section class="bio-hint"><span>✦</span><p>Type the keyword from the reel to unlock the full prompt.</p></section>') + adUnit + '</div>';
+    if (adsenseClient && adsenseSlot) { try { (window.adsbygoogle = window.adsbygoogle || []).push({}); } catch (_) {} }
     root.querySelector('[data-copy]')?.addEventListener('click', async event => {
       await navigator.clipboard.writeText(item.prompt); event.target.textContent = 'Copied'; void track(handle, 'copy');
     });
