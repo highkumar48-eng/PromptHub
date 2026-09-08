@@ -116,8 +116,12 @@ const initDashboard = async () => {
     });
   } catch(error) { root.innerHTML = '<section class="premium-card"><h1>Could not load your creator studio</h1><p>' + esc(error.message) + '</p></section>'; }
 };
+let adminRefreshTimer;
+let adminLastView = 'overview';
+let adminLastCreatorId = '';
 const initAdmin = async () => {
   const root = document.querySelector('[data-admin]'); if (!root) return;
+  adminLastView = root.querySelector('[data-view].active')?.dataset.view || adminLastView;
   try {
     const me = await user(); if (!me) return go('/admin/login');
     const token = session().access_token;
@@ -146,7 +150,7 @@ const initAdmin = async () => {
       <div class="admin-shell">
         <aside class="admin-sidebar">
           <strong class="mobile-admin-brand">PromptHub</strong>
-          <div class="admin-identity"><strong>PromptHub Admin</strong><small>Creator operations</small><span class="admin-live">Live workspace</span></div>
+          <div class="admin-identity"><strong>PromptHub Admin</strong><small>Creator operations</small><span class="admin-live" data-admin-live>Live · updates every 10 sec</span></div>
           <nav class="admin-nav" aria-label="Admin sections">
             <button class="active" data-view-tab="overview"><span class="nav-icon">⌂</span>Overview</button>
             <button data-view-tab="creators"><span class="nav-icon">◉</span>Creators</button>
@@ -178,17 +182,25 @@ const initAdmin = async () => {
           <section class="admin-view" data-view="settings"><section class="admin-panel"><div class="admin-panel-head"><div><h2>Creator earning policy</h2><p>The rules currently visible in every creator dashboard.</p></div></div><div class="creator-list"><article class="creator-row"><div><span class="creator-avatar">1</span><div><strong>50,000 unique visitors</strong><small>A creator qualifies once their monthly threshold is reached.</small></div></div></article><article class="creator-row"><div><span class="creator-avatar">2</span><div><strong>Next-month monetization</strong><small>Earnings begin the month after the qualifying month.</small></div></div></article><article class="creator-row"><div><span class="creator-avatar">3</span><div><strong>50% net distributable share</strong><small>Every deduction and payment reference is visible to the creator.</small></div></div></article></div></section></section>
         </div>
       </div>`;
-    const showView = name => { root.querySelectorAll('[data-view]').forEach(node => node.classList.toggle('active', node.dataset.view === name)); root.querySelectorAll('[data-view-tab]').forEach(node => node.classList.toggle('active', node.dataset.viewTab === name)); };
+    const showView = name => { adminLastView = name; root.querySelectorAll('[data-view]').forEach(node => node.classList.toggle('active', node.dataset.view === name)); root.querySelectorAll('[data-view-tab]').forEach(node => node.classList.toggle('active', node.dataset.viewTab === name)); };
     root.querySelectorAll('[data-view-tab]').forEach(button => button.addEventListener('click', () => showView(button.dataset.viewTab)));
     root.querySelectorAll('[data-open-view]').forEach(button => button.addEventListener('click', () => showView(button.dataset.openView)));
     root.querySelector('[data-new-ledger]')?.addEventListener('click', () => { showView('payouts'); root.querySelector('[data-ledger-panel]')?.scrollIntoView({behavior:'smooth', block:'start'}); });
     root.querySelectorAll('[data-creator-detail]').forEach(button => button.addEventListener('click', () => {
+      adminLastCreatorId = button.dataset.creatorDetail;
       const creator = creators.find(row => row.id === button.dataset.creatorDetail); const totals = creatorStats(button.dataset.creatorDetail);
       const recent = metrics.filter(row => row.creator_id === button.dataset.creatorDetail).sort((a,b) => String(b.metric_date).localeCompare(String(a.metric_date))).slice(0,7);
       const conversion = totals.visitors ? ((totals.copies / totals.visitors) * 100).toFixed(1) : '0.0';
       root.querySelector('[data-creator-inspector]').innerHTML = '<div class="admin-panel-head"><div><h3>' + esc(creator.display_name) + '</h3><p>/c/' + esc(creator.handle) + ' · lifetime link performance</p></div><a class="text-link" target="_blank" href="/c/' + esc(creator.handle) + '">Open bio link</a></div><div class="finance-grid"><article class="admin-kpi"><span class="metric-label">Bio-link views</span><strong>' + totals.visitors.toLocaleString() + '</strong><small>Unique daily visitors</small></article><article class="admin-kpi"><span class="metric-label">Prompt copies</span><strong>' + totals.copies.toLocaleString() + '</strong><small>' + conversion + '% copy conversion</small></article></div><div class="creator-list">' + (recent.map(row => '<article class="creator-row"><div><div><strong>' + esc(row.metric_date) + '</strong><small>Daily performance</small></div></div><span class="admin-badge tracking">' + Number(row.unique_visitors).toLocaleString() + ' views · ' + Number(row.prompt_copies).toLocaleString() + ' copies</span></article>').join('') || '<p class="admin-empty">No activity has been tracked yet.</p>') + '</div>';
     }));
 
+    showView(adminLastView);
+    const selectedCreator = root.querySelector('[data-creator-detail="' + adminLastCreatorId + '"]'); if (selectedCreator) selectedCreator.click();
+    clearTimeout(adminRefreshTimer);
+    adminRefreshTimer = setTimeout(() => {
+      if (document.visibilityState === 'visible' && !root.querySelector('input:focus, textarea:focus, select:focus')) initAdmin();
+      else { clearTimeout(adminRefreshTimer); adminRefreshTimer = setTimeout(initAdmin, 5000); }
+    }, 10000);
     root.querySelector('[data-ledger]')?.addEventListener('submit', async event => { event.preventDefault(); const form = new FormData(event.target); const message = event.target.querySelector('[data-message]'); try { await api('/rest/v1/creator_monthly_ledger', {method:'POST',headers:{Prefer:'return=minimal'},body:JSON.stringify({creator_id:form.get('creator_id'),period_start:form.get('period_start'),period_end:form.get('period_end'),visitor_count:Number(form.get('visitor_count')),gross_revenue_paise:paise(form.get('gross')),invalid_traffic_paise:paise(form.get('invalid')),taxes_paise:paise(form.get('taxes')),direct_payout_cost_paise:paise(form.get('fee'))})}, token); location.reload(); } catch(error) { message.textContent = error.message; } });
     root.querySelectorAll('[data-approve]').forEach(button => button.addEventListener('click', async () => { await api('/rest/v1/creator_monthly_ledger?id=eq.' + button.dataset.approve, {method:'PATCH',headers:{Prefer:'return=minimal'},body:JSON.stringify({status:'approved',approved_at:new Date().toISOString()})}, token); location.reload(); }));
     root.querySelectorAll('[data-paid]').forEach(form => form.addEventListener('submit', async event => { event.preventDefault(); const reference = new FormData(form).get('reference').trim(); await api('/rest/v1/creator_monthly_ledger?id=eq.' + form.dataset.paid, {method:'PATCH',headers:{Prefer:'return=minimal'},body:JSON.stringify({status:'paid',paid_at:new Date().toISOString(),payment_reference:reference})}, token); location.reload(); }));
